@@ -212,12 +212,84 @@ class BlueforsChannel(InstrumentChannel):
 
 class BlueforsTemperatureController(Instrument):
     """
-    QCoDeS driver for the Bluefors Temperature Controller.
+    QCoDeS driver for the Bluefors Temperature Controller (web API).
 
-    Parameters:
-        name (str): Name of the instrument.
-        ip_address (str): IP address of the Bluefors Temperature Controller.
-        port (int): Port number for the Bluefors Temperature Controller.
+    This instrument discovers all temperature channels and heaters from the
+    controller and exposes them as QCoDeS submodules:
+
+    Channels: available under attributes channel_<sanitized_name>
+    Heaters: available under attributes heater_<sanitized_name>
+    Names are taken from the controller and sanitized by replacing spaces/dashes
+    with underscores. If a name is empty, the numeric ID is used.
+
+    The driver communicates with the controller over HTTP and raises
+    requests.HTTPError on non-2xx responses.
+
+    Args:
+        name: QCoDeS instrument name.
+        ip_address: IP or hostname of the Bluefors controller.
+        port: HTTP port (default 5001).
+
+    ___Common tasks and examples___
+
+    Create the instrument and inspect device info
+    >>> tc = BlueforsTemperatureController("bf", "192.168.0.10", port=5001)
+    >>> tc.idn.get()
+    {'fw_version': '...', 'serial': '...', ...}
+
+    List discovered channels and heaters
+    >>> tc.get_channel_names()
+    {1: 'MXC', 2: 'Still', 3: '4K'}
+    >>> tc.get_heater_info()
+    {'data': [{'heater_nr': 1, 'name': 'MXC Heater'}, ...]}
+
+    Access a channel/heater by name
+    >>> ch = tc.channel_MXC          # BlueforsChannel
+    >>> ht = tc.heater_MXC_Heater    # BlueforsHeater
+
+    Read the latest temperature of a channel
+    >>> ch.temperature.get()
+    0.0135
+    Notes:
+    - The channel temperature getter fetches historical data for the last
+      15 minutes and returns the most recent sample. If no sample is found,
+      it returns None and prints a message.
+
+    Couple a channel to a heater (feedback source)
+    >>> ch.heater.get()
+    0
+    >>> ch.heater.set(1)             # Couple channel MXC to heater number 1
+    >>> ch.heater.get()
+    1
+
+    Manual heater control (open-loop)
+    >>> ht.mode.set(0)               # 0 = Manual, 1 = PID
+    >>> ht.status.set(1)             # Turn heater output ON
+    >>> ht.power.set(0.25)           # Set fractional power 0.0–1.0
+    >>> ht.power.get()
+    0.25
+    >>> ht.status.set(0)             # Turn heater output OFF
+
+    PID control (closed-loop)
+    - Ensure the heater is coupled to the intended temperature channel.
+    - Set PID gains and the temperature setpoint (in kelvin).
+    - Enable PID mode and turn the heater on.
+
+    >>> ch.heater.set(1)             # Couple channel to this heater
+    >>> ht.pid_p.set(10.0)
+    >>> ht.pid_i.set(0.5)
+    >>> ht.pid_d.set(0.0)
+    >>> ht.setpoint.set(0.015)       # 15 mK
+    >>> ht.mode.set(1)               # PID mode
+    >>> ht.status.set(1)             # Enable output
+
+    Query current heater state
+    >>> ht.status.get()              # 0 or 1
+    >>> ht.mode.get()                # 0 (Manual) or 1 (PID)
+    >>> ht.setpoint.get()
+    0.015
+    >>> ht.get_power()
+    0.25
     """
 
     def __init__(self, name, ip_address, port=5001, **kwargs):
