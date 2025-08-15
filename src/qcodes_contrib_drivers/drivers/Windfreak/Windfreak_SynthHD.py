@@ -128,7 +128,7 @@ class SynthHDChannel(InstrumentChannel):
                 )
 
 
-class SynthHDInstrument(Instrument):
+class WindfreakSynthHD(Instrument):
     def __init__(self, name: str, devpath: str, **kwargs):
         super().__init__(name, **kwargs)
         self._synth = SynthHD(devpath)
