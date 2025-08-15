@@ -5,7 +5,7 @@ from datetime import datetime, timedelta
 
 import requests
 from qcodes import Instrument, InstrumentChannel
-from qcodes.validators import Numbers
+from qcodes.validators import Numbers, Bool
 
 
 class BlueforsHeater(InstrumentChannel):
@@ -21,9 +21,9 @@ class BlueforsHeater(InstrumentChannel):
             "status",
             get_cmd=self.get_status,
             set_cmd=self.set_status,
-            vals=Numbers(0, 1),
+            vals=Bool(),
             label="Heater Status",
-            docstring="Turn the heater on (1) or off (0).",
+            docstring="Turn the heater on (True) or off (False).",
         )
 
         self.add_parameter(
@@ -256,37 +256,37 @@ class BlueforsTemperatureController(Instrument):
       it returns None and prints a message.
 
     Couple a channel to a heater (feedback source)
-    >>> ch.heater.get()
+    >>> ch.heater()
     0
-    >>> ch.heater.set(1)             # Couple channel MXC to heater number 1
-    >>> ch.heater.get()
+    >>> ch.heater(1)             # Couple channel MXC to heater number 1
+    >>> ch.heater()
     1
 
     Manual heater control (open-loop)
-    >>> ht.mode.set(0)               # 0 = Manual, 1 = PID
-    >>> ht.status.set(1)             # Turn heater output ON
-    >>> ht.power.set(0.25)           # Set fractional power 0.0–1.0
-    >>> ht.power.get()
+    >>> ht.mode(0)               # 0 = Manual, 1 = PID
+    >>> ht.status(True)             # Turn heater output ON
+    >>> ht.power(0.25)           # Set fractional power 0.0–1.0
+    >>> ht.power()
     0.25
-    >>> ht.status.set(0)             # Turn heater output OFF
+    >>> ht.status(False)             # Turn heater output OFF
 
     PID control (closed-loop)
     - Ensure the heater is coupled to the intended temperature channel.
     - Set PID gains and the temperature setpoint (in kelvin).
     - Enable PID mode and turn the heater on.
 
-    >>> ch.heater.set(1)             # Couple channel to this heater
-    >>> ht.pid_p.set(10.0)
-    >>> ht.pid_i.set(0.5)
-    >>> ht.pid_d.set(0.0)
-    >>> ht.setpoint.set(0.015)       # 15 mK
-    >>> ht.mode.set(1)               # PID mode
-    >>> ht.status.set(1)             # Enable output
+    >>> ch.heater(1)             # Couple channel to this heater
+    >>> ht.pid_p(10.0)
+    >>> ht.pid_i(0.5)
+    >>> ht.pid_d(0.0)
+    >>> ht.setpoint(0.015)       # 15 mK
+    >>> ht.mode(1)               # PID mode
+    >>> ht.status(True)             # Enable output
 
     Query current heater state
-    >>> ht.status.get()              # 0 or 1
-    >>> ht.mode.get()                # 0 (Manual) or 1 (PID)
-    >>> ht.setpoint.get()
+    >>> ht.status()              # 0 or 1
+    >>> ht.mode()                # 0 (Manual) or 1 (PID)
+    >>> ht.setpoint()
     0.015
     >>> ht.get_power()
     0.25
