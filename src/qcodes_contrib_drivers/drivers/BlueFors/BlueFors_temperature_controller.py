@@ -1,7 +1,7 @@
 import io
 import sys
 import time
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, UTC
 
 import requests
 from qcodes import Instrument, InstrumentChannel
@@ -161,7 +161,7 @@ class BlueforsChannel(InstrumentChannel):
             "temperature",
             get_cmd=self.get_temperature,
             unit="K",
-            label="Temperature",
+            label=f"Temperature of {name}",
             docstring="Temperature of the channel.",
         )
 
@@ -174,10 +174,11 @@ class BlueforsChannel(InstrumentChannel):
         )
 
     def get_temperature(self):
-        stop_time = datetime.utcnow()
-        start_time = stop_time - timedelta(minutes=15)
-        stop_time_str = stop_time.isoformat() + "Z"
-        start_time_str = start_time.isoformat() + "Z"
+        now = datetime.now(UTC)
+        stop_time = now + timedelta(minutes=60)
+        start_time = now - timedelta(minutes=15)
+        stop_time_str = stop_time.isoformat().split('+')[0] + "Z"
+        start_time_str = start_time.isoformat().split('+')[0] + "Z"
 
         historical_data = self.root_instrument.get_historical_data(self.channel_number, start_time_str, stop_time_str)
         measurements = historical_data.get("measurements", {})
@@ -191,6 +192,9 @@ class BlueforsChannel(InstrumentChannel):
         latest_index = timestamps.index(max(timestamps))
         latest_time = datetime.utcfromtimestamp(timestamps[latest_index])
         latest_temp = temperatures[latest_index]
+
+        if latest_temp is None:
+            latest_temp = 0
 
         # print(f"Channel {self.channel_number} ({self.name}):")
         # print(f"  Last Measurement: {latest_temp} K at {latest_time}")
